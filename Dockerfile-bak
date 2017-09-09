@@ -1,0 +1,51 @@
+#
+# Scala and sbt Dockerfile
+#
+# https://github.com/hseeberger/scala-sbt
+#Usage:
+#cd your-project-folder
+#docker build -t scala-test .
+# docker run -it  scala-test  "run CmdLineArgs-1 CmdLineArgs-2 CmdLineArgs-3"
+# -- OR if No Command Line Argument is to be used, simply
+# docker run -it  scala-test
+
+# Pull base image
+FROM java:8
+
+ENV SCALA_VERSION 2.11.8
+ENV SBT_VERSION 0.13.13
+
+# Install Scala
+## Piping curl directly in tar
+RUN \
+  curl -fsL http://downloads.typesafe.com/scala/$SCALA_VERSION/scala-$SCALA_VERSION.tgz | tar xfz - -C /root/ && \
+  echo >> /root/.bashrc && \
+  echo 'export PATH=~/scala-$SCALA_VERSION/bin:$PATH' >> /root/.bashrc
+
+# Install sbt
+RUN \
+  curl -L -o sbt-$SBT_VERSION.deb http://dl.bintray.com/sbt/debian/sbt-$SBT_VERSION.deb && \
+  dpkg -i sbt-$SBT_VERSION.deb && \
+  rm sbt-$SBT_VERSION.deb && \
+  apt-get update && \
+  apt-get install sbt && \
+  sbt sbtVersion
+
+
+VOLUME [ "/app" ]
+# Define working directory
+WORKDIR /app
+
+COPY . /app/
+EXPOSE  5000
+
+#ENTRYPOINT ["sbt", "run-main com.isentia.daas.ScalaTemplate" ]
+#To understand Reason for the following usage:http://goinbigdata.com/docker-run-vs-cmd-vs-entrypoint/
+# there is a sort of bug in Scala, we cant do
+#scala run cmdLineArg-1
+# we have to instead write in quotes
+#scala "run cmdLineArg-1"
+#which is why we dont include sbt run in ENTRYPOINT. CMD is overwritten by Cmd Line Args
+ENTRYPOINT ["sbt" ]
+CMD ["run"]
+
